@@ -1,0 +1,65 @@
+# Root-level gitignore for WellTaxPro
+.claude/*
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+._*
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+*config/*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Deployment secrets (sensitive!)
+deployment/config.local.sh
+deployment/*.local
+
+# Local development
+local/
+scratch/
+notes.txt
+TODO.local.md
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# Backup files
+*.bak
+*.backup
+
+# Archive files (unless intentionally tracked)
+*.zip
+*.tar.gz
+*.tar
+*.rar
+
+# Database dumps (unless needed)
+*.sql
+!**/migrations/*.sql
+!**/schema/*.sql
+
+# Build artifacts
+dist/
+build/

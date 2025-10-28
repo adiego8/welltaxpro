@@ -1,0 +1,108 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+welltaxpro
+mywelltax
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment and configuration files
+.env
+.env.local
+.env.*.local
+*.local
+config.yaml
+
+# Secret files (Firebase, certificates, keys)
+config/secret/*.json
+config/secret/*.key
+config/secret/*.pem
+config/environment/*
+*/config/*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Exclude example files from ignore
+!config/secret/.gitkeep
+!*.example.json
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.sql.gz
+prod-backups/*.sql
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS-specific files
+Thumbs.db
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Debug and profiling
+*.prof
+*.cpu
+*.mem
+
+# Air live reload (if using)
+tmp/
+.air.toml
+
+# Docker
+.dockerignore
+
+# Terraform (if used for infrastructure)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Local development
+local/
+scratch/

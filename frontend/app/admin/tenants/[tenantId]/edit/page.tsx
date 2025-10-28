@@ -1,0 +1,658 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useParams } from 'next/navigation'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { UserMenu } from '@/components/UserMenu'
+import { useAuth } from '@/contexts/AuthContext'
+
+interface Tenant {
+  id: string
+  tenantId: string
+  tenantName: string
+  dbHost: string
+  dbPort: number
+  dbUser: string
+  dbName: string
+  dbSslMode: string
+  schemaPrefix: string
+  adapterType: string
+  storageProvider: string
+  storageBucket: string
+  storageCredentialsSecret: string
+  storageCredentialsPath: string
+  docusignIntegrationKey: string
+  docusignClientId: string
+  docusignPrivateKeySecret: string
+  docusignApiUrl: string
+  isActive: boolean
+}
+
+function EditTenantContent() {
+  const router = useRouter()
+  const params = useParams()
+  const tenantId = params.tenantId as string
+  const { user } = useAuth()
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [tenant, setTenant] = useState<Tenant | null>(null)
+
+  const [formData, setFormData] = useState({
+    tenantName: '',
+    dbHost: '',
+    dbPort: '5432',
+    dbUser: '',
+    dbPassword: '', // Optional - only update if provided
+    dbName: '',
+    dbSslMode: 'require',
+    schemaPrefix: '',
+    adapterType: 'mywelltax',
+    storageProvider: '',
+    storageBucket: '',
+    storageCredentialsSecret: '',
+    storageCredentialsPath: '',
+    docusignIntegrationKey: '',
+    docusignClientId: '',
+    docusignPrivateKeySecret: '',
+    docusignApiUrl: 'https://demo.docusign.net/restapi',
+    isActive: true,
+    notes: '',
+  })
+
+  // Fetch tenant data
+  useEffect(() => {
+    async function fetchTenant() {
+      if (!user) return
+
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
+        const idToken = await user.getIdToken()
+
+        const response = await fetch(`${apiUrl}/api/v1/admin/tenants/${tenantId}`, {
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch tenant')
+        }
+
+        const data = await response.json()
+        setTenant(data)
+
+        // Populate form
+        setFormData({
+          tenantName: data.tenantName || '',
+          dbHost: data.dbHost || '',
+          dbPort: String(data.dbPort || 5432),
+          dbUser: data.dbUser || '',
+          dbPassword: '', // Don't populate password for security
+          dbName: data.dbName || '',
+          dbSslMode: data.dbSslMode || 'require',
+          schemaPrefix: data.schemaPrefix || '',
+          adapterType: data.adapterType || 'mywelltax',
+          storageProvider: data.storageProvider || '',
+          storageBucket: data.storageBucket || '',
+          storageCredentialsSecret: data.storageCredentialsSecret || '',
+          storageCredentialsPath: data.storageCredentialsPath || '',
+          docusignIntegrationKey: data.docusignIntegrationKey || '',
+          docusignClientId: data.docusignClientId || '',
+          docusignPrivateKeySecret: data.docusignPrivateKeySecret || '',
+          docusignApiUrl: data.docusignApiUrl || 'https://demo.docusign.net/restapi',
+          isActive: data.isActive !== undefined ? data.isActive : true,
+          notes: '',
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load tenant')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTenant()
+  }, [tenantId, user])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData({ ...formData, [name]: checked })
+    } else {
+      setFormData({ ...formData, [name]: value })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSaving(true)
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
+      const idToken = await user?.getIdToken()
+
+      // Build update payload - only include fields that have values
+      const payload: any = {
+        tenantName: formData.tenantName,
+        dbHost: formData.dbHost,
+        dbPort: parseInt(formData.dbPort),
+        dbUser: formData.dbUser,
+        dbName: formData.dbName,
+        dbSslMode: formData.dbSslMode,
+        schemaPrefix: formData.schemaPrefix,
+        adapterType: formData.adapterType,
+        isActive: formData.isActive,
+      }
+
+      // Only include password if it was changed
+      if (formData.dbPassword) {
+        payload.dbPassword = formData.dbPassword
+      }
+
+      // Include optional fields
+      if (formData.storageProvider) payload.storageProvider = formData.storageProvider
+      if (formData.storageBucket) payload.storageBucket = formData.storageBucket
+      if (formData.storageCredentialsSecret) payload.storageCredentialsSecret = formData.storageCredentialsSecret
+      if (formData.storageCredentialsPath) payload.storageCredentialsPath = formData.storageCredentialsPath
+      if (formData.docusignIntegrationKey) payload.docusignIntegrationKey = formData.docusignIntegrationKey
+      if (formData.docusignClientId) payload.docusignClientId = formData.docusignClientId
+      if (formData.docusignPrivateKeySecret) payload.docusignPrivateKeySecret = formData.docusignPrivateKeySecret
+      if (formData.docusignApiUrl) payload.docusignApiUrl = formData.docusignApiUrl
+      if (formData.notes) payload.notes = formData.notes
+
+      const response = await fetch(`${apiUrl}/api/v1/admin/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to update tenant')
+      }
+
+      router.push('/admin/tenants')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading account...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !tenant) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Link href="/admin/tenants" className="text-blue-600 hover:text-blue-800">
+            ← Back to Accounts
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex-shrink-0">
+              <Link href="/">
+                <img src="/logo.png" alt="WellTaxPro" className="h-12 sm:h-16 cursor-pointer" />
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link
+                href="/"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900"
+              >
+                Home
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link
+                href="/admin/tenants"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900"
+              >
+                <span className="hidden sm:inline">Account Management</span>
+                <span className="sm:hidden">Accounts</span>
+              </Link>
+              <span className="text-gray-300">|</span>
+              <span className="text-xs sm:text-sm font-semibold text-blue-600">Edit Account</span>
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Edit Account: {tenant?.tenantName}</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-600">
+              Update database connection and integration settings for this account.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 rounded-md bg-red-50 p-4">
+              <div className="text-sm text-red-800">{error}</div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Basic Information */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label htmlFor="tenantId" className="block text-sm font-medium text-gray-700">
+                      Tenant ID
+                    </label>
+                    <input
+                      type="text"
+                      name="tenantId"
+                      id="tenantId"
+                      disabled
+                      value={tenantId}
+                      className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm sm:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Tenant ID cannot be changed</p>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
+                      Tenant Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="tenantName"
+                      id="tenantName"
+                      required
+                      value={formData.tenantName}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="adapterType" className="block text-sm font-medium text-gray-700">
+                      Adapter Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="adapterType"
+                      id="adapterType"
+                      required
+                      value={formData.adapterType}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="mywelltax">MyWellTax</option>
+                      <option value="drake">Drake</option>
+                      <option value="lacerte">Lacerte</option>
+                      <option value="proseries">ProSeries</option>
+                      <option value="ultratax">UltraTax</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="isActive"
+                        checked={formData.isActive}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Account is active</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Database Configuration */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  Database Configuration
+                </h3>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="dbHost" className="block text-sm font-medium text-gray-700">
+                      Database Host <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="dbHost"
+                      id="dbHost"
+                      required
+                      value={formData.dbHost}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="dbPort" className="block text-sm font-medium text-gray-700">
+                      Database Port <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="dbPort"
+                      id="dbPort"
+                      required
+                      value={formData.dbPort}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="dbUser" className="block text-sm font-medium text-gray-700">
+                      Database User <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="dbUser"
+                      id="dbUser"
+                      required
+                      value={formData.dbUser}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="dbPassword" className="block text-sm font-medium text-gray-700">
+                      Database Password
+                    </label>
+                    <input
+                      type="password"
+                      name="dbPassword"
+                      id="dbPassword"
+                      value={formData.dbPassword}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Leave blank to keep current password"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Only enter if changing password</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="dbName" className="block text-sm font-medium text-gray-700">
+                      Database Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="dbName"
+                      id="dbName"
+                      required
+                      value={formData.dbName}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="dbSslMode" className="block text-sm font-medium text-gray-700">
+                      SSL Mode <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="dbSslMode"
+                      id="dbSslMode"
+                      required
+                      value={formData.dbSslMode}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="disable">Disable</option>
+                      <option value="require">Require</option>
+                      <option value="verify-ca">Verify CA</option>
+                      <option value="verify-full">Verify Full</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="schemaPrefix" className="block text-sm font-medium text-gray-700">
+                      Schema Prefix <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="schemaPrefix"
+                      id="schemaPrefix"
+                      required
+                      value={formData.schemaPrefix}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Storage Configuration */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  Storage Configuration
+                </h3>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="storageProvider" className="block text-sm font-medium text-gray-700">
+                      Storage Provider
+                    </label>
+                    <select
+                      name="storageProvider"
+                      id="storageProvider"
+                      value={formData.storageProvider}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="">None</option>
+                      <option value="gcs">Google Cloud Storage</option>
+                      <option value="s3">Amazon S3</option>
+                      <option value="azure">Azure Blob Storage</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="storageBucket" className="block text-sm font-medium text-gray-700">
+                      Storage Bucket
+                    </label>
+                    <input
+                      type="text"
+                      name="storageBucket"
+                      id="storageBucket"
+                      value={formData.storageBucket}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="storageCredentialsSecret" className="block text-sm font-medium text-gray-700">
+                      Credentials Secret Path
+                    </label>
+                    <input
+                      type="text"
+                      name="storageCredentialsSecret"
+                      id="storageCredentialsSecret"
+                      value={formData.storageCredentialsSecret}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="storageCredentialsPath" className="block text-sm font-medium text-gray-700">
+                      Credentials File Path
+                    </label>
+                    <input
+                      type="text"
+                      name="storageCredentialsPath"
+                      id="storageCredentialsPath"
+                      value={formData.storageCredentialsPath}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DocuSign Configuration */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  DocuSign Configuration
+                </h3>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="docusignIntegrationKey" className="block text-sm font-medium text-gray-700">
+                      Integration Key
+                    </label>
+                    <input
+                      type="text"
+                      name="docusignIntegrationKey"
+                      id="docusignIntegrationKey"
+                      value={formData.docusignIntegrationKey}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="docusignClientId" className="block text-sm font-medium text-gray-700">
+                      Client ID
+                    </label>
+                    <input
+                      type="text"
+                      name="docusignClientId"
+                      id="docusignClientId"
+                      value={formData.docusignClientId}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="docusignPrivateKeySecret" className="block text-sm font-medium text-gray-700">
+                      Private Key Secret Path
+                    </label>
+                    <input
+                      type="text"
+                      name="docusignPrivateKeySecret"
+                      id="docusignPrivateKeySecret"
+                      value={formData.docusignPrivateKeySecret}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="docusignApiUrl" className="block text-sm font-medium text-gray-700">
+                      API URL
+                    </label>
+                    <select
+                      name="docusignApiUrl"
+                      id="docusignApiUrl"
+                      value={formData.docusignApiUrl}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="https://demo.docusign.net/restapi">Demo</option>
+                      <option value="https://na3.docusign.net/restapi">Production (NA3)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                  Notes
+                </h3>
+                <div>
+                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                    Additional Notes
+                  </label>
+                  <textarea
+                    name="notes"
+                    id="notes"
+                    rows={3}
+                    value={formData.notes}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="Any additional information about this account..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3">
+              <Link
+                href="/admin/tenants"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </Link>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function EditTenantPage() {
+  return (
+    <ProtectedRoute requireAdmin>
+      <EditTenantContent />
+    </ProtectedRoute>
+  )
+}

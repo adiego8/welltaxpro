@@ -154,15 +154,6 @@ func (api *API) InitRoutes() {
 		),
 	).Methods(http.MethodGet)
 
-	// Get employee by ID (admin only)
-	api.Router.Handle("/api/v1/employees/{employeeId}",
-		api.authMiddleware.Authenticate(
-			api.authMiddleware.RequireAdmin(
-				http.HandlerFunc(api.getEmployeeByID),
-			),
-		),
-	).Methods(http.MethodGet)
-
 	// Get current employee info (requires auth)
 	api.Router.Handle("/api/v1/employees/me",
 		api.authMiddleware.Authenticate(
@@ -181,6 +172,15 @@ func (api *API) InitRoutes() {
 	api.Router.Handle("/api/v1/employees/me/tenants",
 		api.authMiddleware.Authenticate(
 			http.HandlerFunc(api.getEmployeeTenants),
+		),
+	).Methods(http.MethodGet)
+
+	// Get employee by ID (admin only)
+	api.Router.Handle("/api/v1/employees/{employeeId}",
+		api.authMiddleware.Authenticate(
+			api.authMiddleware.RequireAdmin(
+				http.HandlerFunc(api.getEmployeeByID),
+			),
 		),
 	).Methods(http.MethodGet)
 
@@ -223,6 +223,15 @@ func (api *API) InitRoutes() {
 		api.authMiddleware.Authenticate(
 			api.auditMiddleware.LogAccess(types.AuditActionView, types.AuditResourceClient)(
 				http.HandlerFunc(api.getClientComprehensive),
+			),
+		),
+	).Methods(http.MethodGet)
+
+	// Filings endpoint (filtered by status/year)
+	api.Router.Handle("/api/v1/{tenantId}/filings",
+		api.authMiddleware.Authenticate(
+			api.auditMiddleware.LogAccess(types.AuditActionView, types.AuditResourceClient)(
+				http.HandlerFunc(api.getFilings),
 			),
 		),
 	).Methods(http.MethodGet)

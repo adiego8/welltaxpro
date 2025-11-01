@@ -116,10 +116,13 @@ func (s *Store) GetTenantConfig(tenantID string) (*types.TenantConnection, error
 
 // GetTenantDB gets or creates a database connection for a tenant
 func (s *Store) GetTenantDB(tenantID string) (*sql.DB, *types.TenantConnection, error) {
+	logger.Infof("[GetTenantDB] Starting - TenantID: %s", tenantID)
+
 	// Check if connection already exists
 	s.tenantConnsMutex.RLock()
 	if conn, exists := s.tenantConns[tenantID]; exists {
 		s.tenantConnsMutex.RUnlock()
+		logger.Infof("[GetTenantDB] Reusing existing connection - TenantID: %s", tenantID)
 
 		// Update last access time
 		s.tenantConnsMutex.Lock()
@@ -129,17 +132,24 @@ func (s *Store) GetTenantDB(tenantID string) (*sql.DB, *types.TenantConnection, 
 		// Get tenant config for schema info
 		tc, err := s.getTenantConnection(tenantID)
 		if err != nil {
+			logger.Errorf("[GetTenantDB] Failed to get tenant config - TenantID: %s, Error: %v", tenantID, err)
 			return nil, nil, err
 		}
 		return conn.db, tc, nil
 	}
 	s.tenantConnsMutex.RUnlock()
 
+	logger.Infof("[GetTenantDB] No existing connection, fetching config - TenantID: %s", tenantID)
+
 	// Get tenant connection details
 	tc, err := s.getTenantConnection(tenantID)
 	if err != nil {
+		logger.Errorf("[GetTenantDB] Failed to get tenant connection - TenantID: %s, Error: %v", tenantID, err)
 		return nil, nil, err
 	}
+
+	logger.Infof("[GetTenantDB] Config fetched - TenantID: %s, DBHost: %s, DBPort: %d, DBName: %s, SSLMode: %s",
+		tenantID, tc.DBHost, tc.DBPort, tc.DBName, tc.DBSslMode)
 
 	// Create new connection
 	s.tenantConnsMutex.Lock()
@@ -147,15 +157,19 @@ func (s *Store) GetTenantDB(tenantID string) (*sql.DB, *types.TenantConnection, 
 
 	// Double-check if connection was created while waiting for lock
 	if conn, exists := s.tenantConns[tenantID]; exists {
+		logger.Infof("[GetTenantDB] Connection created while waiting for lock - TenantID: %s", tenantID)
 		conn.lastAccess = time.Now()
 		return conn.db, tc, nil
 	}
 
-	// Open database connection
+	logger.Infof("[GetTenantDB] Opening new database connection - TenantID: %s", tenantID)
+
+	// Open database connection (DO NOT log connection string - contains password)
 	connStr := tc.GetConnectionString()
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		logger.Errorf("Failed to open connection to tenant %s: %v", tenantID, err)
+		logger.Errorf("[GetTenantDB] Failed to open connection - TenantID: %s, DBHost: %s, Error: %v",
+			tenantID, tc.DBHost, err)
 		return nil, nil, fmt.Errorf("failed to connect to tenant database: %w", err)
 	}
 
@@ -164,10 +178,13 @@ func (s *Store) GetTenantDB(tenantID string) (*sql.DB, *types.TenantConnection, 
 	db.SetMaxIdleConns(2)
 	db.SetConnMaxLifetime(30 * time.Second)
 
+	logger.Infof("[GetTenantDB] Testing connection with ping - TenantID: %s", tenantID)
+
 	// Test connection
 	if err := db.Ping(); err != nil {
 		db.Close()
-		logger.Errorf("Failed to ping tenant %s database: %v", tenantID, err)
+		logger.Errorf("[GetTenantDB] FAILED - Ping failed - TenantID: %s, DBHost: %s, DBPort: %d, Error: %v",
+			tenantID, tc.DBHost, tc.DBPort, err)
 		return nil, nil, fmt.Errorf("failed to ping tenant database: %w", err)
 	}
 
@@ -176,7 +193,7 @@ func (s *Store) GetTenantDB(tenantID string) (*sql.DB, *types.TenantConnection, 
 		db:         db,
 		lastAccess: time.Now(),
 	}
-	logger.Infof("Successfully connected to tenant %s database", tenantID)
+	logger.Infof("[GetTenantDB] SUCCESS - Connection established - TenantID: %s, DBHost: %s", tenantID, tc.DBHost)
 
 	return db, tc, nil
 }

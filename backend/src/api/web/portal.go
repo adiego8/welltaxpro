@@ -23,6 +23,14 @@ func (api *API) sendPortalLink(w http.ResponseWriter, r *http.Request) {
 	tenantID := vars["tenantId"]
 	clientID := vars["clientId"]
 
+	// Parse optional request body for base URL
+	var reqBody struct {
+		BaseURL string `json:"baseUrl,omitempty"`
+	}
+	if r.Body != nil {
+		json.NewDecoder(r.Body).Decode(&reqBody)
+	}
+
 	logger.Infof("Sending portal link for client %s in tenant %s", clientID, tenantID)
 
 	// Get tenant database connection
@@ -68,8 +76,12 @@ func (api *API) sendPortalLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build portal URL
-	portalURL := fmt.Sprintf("%s/%s/portal?token=%s", api.portalBaseURL, tenantID, token)
+	// Build portal URL - use provided base URL or fall back to configured one
+	baseURL := reqBody.BaseURL
+	if baseURL == "" {
+		baseURL = api.portalBaseURL
+	}
+	portalURL := fmt.Sprintf("%s/%s/portal?token=%s", baseURL, tenantID, token)
 
 	// Prepare client name
 	clientName := clientFirstName

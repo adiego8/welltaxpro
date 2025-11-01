@@ -346,9 +346,24 @@ func (a *MyWellTaxAdapter) getFilingPayments(db *sql.DB, schemaPrefix string, fi
 	var payments []*types.Payment
 	for rows.Next() {
 		payment := &types.Payment{}
-		if err := rows.Scan(&payment.ID, &payment.FilingID, &payment.StripeSessionID, &payment.Amount, &payment.OriginalAmount, &payment.DiscountAmount, &payment.DiscountCode, &payment.Status, &payment.CreatedAt, &payment.UpdatedAt); err != nil {
+		var amountCents float64
+		var originalAmountCents, discountAmountCents *float64
+
+		if err := rows.Scan(&payment.ID, &payment.FilingID, &payment.StripeSessionID, &amountCents, &originalAmountCents, &discountAmountCents, &payment.DiscountCode, &payment.Status, &payment.CreatedAt, &payment.UpdatedAt); err != nil {
 			return nil, err
 		}
+
+		// Convert cents to dollars (data is stored as cents but in decimal format)
+		payment.Amount = amountCents / 100.0
+		if originalAmountCents != nil {
+			dollars := *originalAmountCents / 100.0
+			payment.OriginalAmount = &dollars
+		}
+		if discountAmountCents != nil {
+			dollars := *discountAmountCents / 100.0
+			payment.DiscountAmount = &dollars
+		}
+
 		payment.Items, _ = a.getPaymentItems(db, schemaPrefix, payment.ID)
 		payments = append(payments, payment)
 	}
@@ -366,9 +381,12 @@ func (a *MyWellTaxAdapter) getPaymentItems(db *sql.DB, schemaPrefix string, paym
 	var items []*types.PaymentItem
 	for rows.Next() {
 		item := &types.PaymentItem{}
-		if err := rows.Scan(&item.ID, &item.PaymentID, &item.PriceID, &item.Name, &item.Quantity, &item.UnitAmount); err != nil {
+		var unitAmountCents float64
+		if err := rows.Scan(&item.ID, &item.PaymentID, &item.PriceID, &item.Name, &item.Quantity, &unitAmountCents); err != nil {
 			return nil, err
 		}
+		// Convert cents to dollars (data is stored as cents but in decimal format)
+		item.UnitAmount = unitAmountCents / 100.0
 		items = append(items, item)
 	}
 	return items, rows.Err()
@@ -389,9 +407,14 @@ func (a *MyWellTaxAdapter) getFilingDiscounts(db *sql.DB, schemaPrefix string, f
 	var discounts []*types.FilingDiscount
 	for rows.Next() {
 		discount := &types.FilingDiscount{}
-		if err := rows.Scan(&discount.ID, &discount.FilingID, &discount.DiscountCodeID, &discount.OriginalAmount, &discount.DiscountAmount, &discount.FinalAmount, &discount.AppliedAt, &discount.Code); err != nil {
+		var originalAmountCents, discountAmountCents, finalAmountCents int64
+		if err := rows.Scan(&discount.ID, &discount.FilingID, &discount.DiscountCodeID, &originalAmountCents, &discountAmountCents, &finalAmountCents, &discount.AppliedAt, &discount.Code); err != nil {
 			return nil, err
 		}
+		// Convert cents to dollars
+		discount.OriginalAmount = float64(originalAmountCents) / 100.0
+		discount.DiscountAmount = float64(discountAmountCents) / 100.0
+		discount.FinalAmount = float64(finalAmountCents) / 100.0
 		discounts = append(discounts, discount)
 	}
 	return discounts, rows.Err()

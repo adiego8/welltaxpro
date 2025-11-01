@@ -14,22 +14,25 @@ func (api *API) getClients(w http.ResponseWriter, r *http.Request) {
 	tenantID := vars["tenantId"]
 
 	if tenantID == "" {
+		logger.Warning("getClients called without tenant ID")
 		http.Error(w, "tenant ID is required", http.StatusBadRequest)
 		return
 	}
 
-	logger.Infof("Fetching clients for tenant: %s", tenantID)
+	logger.Infof("[getClients] Starting request - TenantID: %s, Method: %s, Path: %s", tenantID, r.Method, r.URL.Path)
 
 	clients, err := api.store.GetClients(tenantID)
 	if err != nil {
-		logger.Errorf("Failed to get clients for tenant %s: %v", tenantID, err)
+		logger.Errorf("[getClients] FAILED - TenantID: %s, Error: %v", tenantID, err)
 		http.Error(w, "failed to fetch clients", http.StatusInternalServerError)
 		return
 	}
 
+	logger.Infof("[getClients] SUCCESS - TenantID: %s, ClientCount: %d", tenantID, len(clients))
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(clients); err != nil {
-		logger.Errorf("Failed to encode clients response: %v", err)
+		logger.Errorf("[getClients] Failed to encode response - TenantID: %s, Error: %v", tenantID, err)
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}
@@ -86,6 +89,51 @@ func (api *API) getClientComprehensive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(clientData); err != nil {
 		logger.Errorf("Failed to encode comprehensive client response: %v", err)
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// getFilings returns clients with their filings (paginated, no filtering)
+func (api *API) getFilings(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tenantID := vars["tenantId"]
+
+	if tenantID == "" {
+		http.Error(w, "tenant ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get pagination parameters (default: limit=100, offset=0)
+	limit := 100
+	offset := 0
+
+	if limitParam := r.URL.Query().Get("limit"); limitParam != "" {
+		if parsedLimit, err := json.Number(limitParam).Int64(); err == nil && parsedLimit > 0 {
+			limit = int(parsedLimit)
+		}
+	}
+
+	if offsetParam := r.URL.Query().Get("offset"); offsetParam != "" {
+		if parsedOffset, err := json.Number(offsetParam).Int64(); err == nil && parsedOffset >= 0 {
+			offset = int(parsedOffset)
+		}
+	}
+
+	logger.Infof("Fetching filings for tenant %s with pagination - limit: %d, offset: %d", tenantID, limit, offset)
+
+	clientsData, err := api.store.GetClientsByFilings(tenantID, limit, offset)
+	if err != nil {
+		logger.Errorf("Failed to get filings for tenant %s: %v", tenantID, err)
+		http.Error(w, "failed to fetch filings", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Infof("Successfully fetched %d clients with their filings", len(clientsData))
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(clientsData); err != nil {
+		logger.Errorf("Failed to encode filings response: %v", err)
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}

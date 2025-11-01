@@ -1,13 +1,10 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git
-
 # Set working directory
-WORKDIR /build
+WORKDIR /app
 
-# Copy go mod files
+# Copy go mod files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -15,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o welltaxpro ./src/cmd/server
+RUN go build -o welltaxpro ./src/cmd/main
 
 # Runtime stage
 FROM alpine:latest
@@ -26,10 +23,10 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/welltaxpro .
+COPY --from=builder /app/welltaxpro .
 
-# Copy production config template (env vars will be substituted at runtime)
-COPY config/environment/prod-config.yaml /app/config/prod.yaml
+# Make binary executable
+RUN chmod +x welltaxpro
 
 # Expose port
 EXPOSE 8080

@@ -17,6 +17,11 @@ type ClientAdapter interface {
 	// GetClientComprehensive retrieves all data related to a client (filings, dependents, etc.)
 	GetClientComprehensive(db *sql.DB, schemaPrefix string, clientID string) (*types.ClientComprehensive, error)
 
+	// GetClientsByFilings retrieves clients with their filings (paginated)
+	// Returns ClientComprehensive for each client with all their filings
+	// Filtering should be done on the frontend
+	GetClientsByFilings(db *sql.DB, schemaPrefix string, limit int, offset int) ([]*types.ClientComprehensive, error)
+
 	// GetAffiliates retrieves all affiliates from the tenant's database
 	GetAffiliates(db *sql.DB, schemaPrefix string, activeOnly bool) ([]*types.Affiliate, error)
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 interface ClientData {
@@ -150,24 +150,7 @@ export default function PortalDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [clientEmail, setClientEmail] = useState<string>('');
 
-  useEffect(() => {
-    // Check if user has valid session
-    const token = sessionStorage.getItem('portalToken');
-    const email = sessionStorage.getItem('portalEmail');
-
-    if (!token) {
-      router.push(`/${tenantId}/portal`);
-      return;
-    }
-
-    if (email) {
-      setClientEmail(email);
-    }
-
-    fetchClientData(token);
-  }, [tenantId, router]);
-
-  const fetchClientData = async (token: string) => {
+  const fetchClientData = useCallback(async (token: string) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
       const response = await fetch(
@@ -198,7 +181,24 @@ export default function PortalDashboard() {
       setError('Failed to load your information. Please try again.');
       setLoading(false);
     }
-  };
+  }, [tenantId, router]);
+
+  useEffect(() => {
+    // Check if user has valid session
+    const token = sessionStorage.getItem('portalToken');
+    const email = sessionStorage.getItem('portalEmail');
+
+    if (!token) {
+      router.push(`/${tenantId}/portal`);
+      return;
+    }
+
+    if (email) {
+      setClientEmail(email);
+    }
+
+    fetchClientData(token);
+  }, [tenantId, router, fetchClientData]);
 
   const toggleFiling = (filingId: string) => {
     setExpandedFilings(prev => {
@@ -263,19 +263,6 @@ export default function PortalDashboard() {
   const handleLogout = () => {
     sessionStorage.clear();
     router.push(`/${tenantId}/portal`);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
-      case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'PENDING':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
   };
 
   if (loading) {

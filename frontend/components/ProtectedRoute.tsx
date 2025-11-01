@@ -7,6 +7,7 @@ import { LoginPage } from '@/components/LoginPage';
 interface ProtectedRouteProps {
     children: React.ReactNode;
     fallback?: React.ReactNode;
+    requireAdmin?: boolean;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({

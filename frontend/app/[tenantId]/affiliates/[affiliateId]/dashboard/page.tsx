@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 
 interface Affiliate {
   id: string

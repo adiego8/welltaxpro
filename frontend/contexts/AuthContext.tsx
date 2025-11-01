@@ -47,12 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
     const [employeeLoading, setEmployeeLoading] = useState(false);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('AuthProvider mounted');
-        console.log('Firebase auth object:', auth);
-    }, []);
-
     const createEmployeeIfNeeded = async (firebaseUser: User) => {
         setEmployeeLoading(true);
         try {

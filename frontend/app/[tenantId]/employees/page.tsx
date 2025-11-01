@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { UserMenu } from '@/components/UserMenu'
+import { TenantSwitcher } from '@/components/TenantSwitcher'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface Employee {
@@ -88,9 +89,7 @@ function EmployeesContent() {
               <span className="text-xs sm:text-sm font-semibold text-orange-600">
                 Employees
               </span>
-              <div className="hidden lg:block text-xs text-gray-500 border-l pl-4 ml-4">
-                <span className="font-mono">{tenantId}</span>
-              </div>
+              <TenantSwitcher />
               <UserMenu />
             </div>
           </div>

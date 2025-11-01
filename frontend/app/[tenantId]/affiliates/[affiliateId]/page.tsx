@@ -108,6 +108,7 @@ function AffiliateDetailContent() {
     children?: React.ReactNode
     onConfirm?: () => void
     confirmText?: string
+    cancelText?: string
     showCancel?: boolean
   }>({
     isOpen: false,
@@ -304,7 +305,17 @@ function AffiliateDetailContent() {
     try {
       const idToken = await user.getIdToken()
 
-      const payload: any = {
+      const payload: {
+        code: string;
+        discountType: string;
+        discountValue: number;
+        affiliateId: string;
+        description?: string;
+        maxUses?: number;
+        validFrom?: string;
+        validUntil?: string;
+        commissionRate?: number;
+      } = {
         code: codeFormData.code.toUpperCase(),
         discountType: codeFormData.discountType,
         discountValue: parseFloat(codeFormData.discountValue),
@@ -376,7 +387,17 @@ function AffiliateDetailContent() {
     try {
       const idToken = await user.getIdToken()
 
-      const payload: any = {
+      const payload: {
+        code: string;
+        discountType: string;
+        discountValue: number;
+        isActive: boolean;
+        description?: string;
+        maxUses?: number;
+        validFrom?: string;
+        validUntil?: string;
+        commissionRate?: number;
+      } = {
         code: codeFormData.code.toUpperCase(),
         discountType: codeFormData.discountType,
         discountValue: parseFloat(codeFormData.discountValue),

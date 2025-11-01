@@ -20,6 +20,8 @@
 .next
 out
 
+/config
+
 # Production build
 /build
 /dist

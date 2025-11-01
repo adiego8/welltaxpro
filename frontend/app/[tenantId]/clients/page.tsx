@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { UserMenu } from '@/components/UserMenu'
+import { TenantSwitcher } from '@/components/TenantSwitcher'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface Client {
@@ -85,9 +86,14 @@ function ClientsContent() {
               <span className="text-xs sm:text-sm font-semibold text-blue-600">
                 Clients
               </span>
-              <div className="hidden lg:block text-xs text-gray-500 border-l pl-4 ml-4">
-                <span className="font-mono">{tenantId}</span>
-              </div>
+              <span className="text-gray-300">|</span>
+              <Link
+                href={`/${tenantId}/filings`}
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900"
+              >
+                Filings
+              </Link>
+              <TenantSwitcher />
               <UserMenu />
             </div>
           </div>
@@ -137,7 +143,7 @@ function ClientsContent() {
                   </svg>
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">No clients found</h3>
-                <p className="mt-2 text-sm text-gray-600 max-w-sm mx-auto">Your client list is empty. Clients will appear here once they're added to the system.</p>
+                <p className="mt-2 text-sm text-gray-600 max-w-sm mx-auto">Your client list is empty. Clients will appear here once they&apos;re added to the system.</p>
               </div>
             </div>
           )}

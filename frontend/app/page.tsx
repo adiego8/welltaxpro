@@ -119,7 +119,7 @@ export default function Home() {
         <div className="max-w-md mx-auto text-center p-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">No Tenant Access</h2>
           <p className="text-gray-600 mb-4">
-            You don't have access to any tenants yet. Please contact your administrator.
+            You don&apos;t have access to any tenants yet. Please contact your administrator.
           </p>
         </div>
       </div>
@@ -243,6 +243,27 @@ export default function Home() {
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">Affiliates</h3>
                     <p className="text-sm text-gray-600 mt-2">Manage affiliate partners</p>
+                  </div>
+                </Link>
+
+                {/* Filings Card */}
+                <Link
+                  href={`/${defaultTenant.tenantId}/filings`}
+                  className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition-all overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                        <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Filings</h3>
+                    <p className="text-sm text-gray-600 mt-2">View and filter tax filings</p>
                   </div>
                 </Link>
 

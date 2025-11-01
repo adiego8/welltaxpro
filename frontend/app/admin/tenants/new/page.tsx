@@ -70,7 +70,7 @@ function NewTenantContent() {
         throw new Error(errorText || 'Failed to create tenant')
       }
 
-      const data = await response.json()
+      await response.json()
       router.push('/admin/tenants')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')

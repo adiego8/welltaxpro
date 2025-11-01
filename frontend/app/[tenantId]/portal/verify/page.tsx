@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
 
 export default function PortalVerifyPage({ params }: { params: { tenantId: string } }) {
   const router = useRouter()
@@ -81,7 +80,7 @@ export default function PortalVerifyPage({ params }: { params: { tenantId: strin
 
       // Store session token
       sessionStorage.setItem('portalToken', data.sessionToken)
-      sessionStorage.setItem('tokenExpiry', Date.now() + data.expiresIn * 1000)
+      sessionStorage.setItem('tokenExpiry', String(Date.now() + data.expiresIn * 1000))
 
       // Redirect to dashboard
       router.push(`/${tenantId}/portal/dashboard`)

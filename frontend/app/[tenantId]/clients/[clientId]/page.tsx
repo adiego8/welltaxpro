@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { UserMenu } from '@/components/UserMenu'
+import { TenantSwitcher } from '@/components/TenantSwitcher'
 import { useAuth } from '@/contexts/AuthContext'
 import { Dialog } from '@/components/Dialog'
 
@@ -181,6 +182,7 @@ function ClientDetailContent() {
     children?: React.ReactNode
     onConfirm?: () => void
     confirmText?: string
+    cancelText?: string
     showCancel?: boolean
   }>({
     isOpen: false,
@@ -379,7 +381,11 @@ function ClientDetailContent() {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            baseUrl: window.location.origin
+          })
         }
       )
 
@@ -397,7 +403,20 @@ function ClientDetailContent() {
   }
 
   // Send signature request
-  const handleSendSignatureRequest = async (signatureData: any) => {
+  const handleSendSignatureRequest = async (signatureData: {
+    pdfPath: string;
+    taxPayerEmail: string;
+    taxPayerName: string;
+    taxPayerSsn: string;
+    spouseName: string;
+    spouseEmail: string;
+    grossIncome: number;
+    totalTax: number;
+    taxWithHeld: number;
+    refund: number;
+    owed: number;
+    spouseSignature: boolean;
+  }) => {
     if (!user || !clientData || !selectedFilingForSignature) return
 
     setSendingSignature(true)
@@ -421,7 +440,7 @@ function ClientDetailContent() {
         throw new Error('Failed to send signature request')
       }
 
-      const data = await response.json()
+      await response.json()
       showAlert('Success', 'Signature request sent successfully', 'success')
       setSignatureModalOpen(false)
       setSelectedFilingForSignature(null)
@@ -593,9 +612,7 @@ function ClientDetailContent() {
               <span className="text-xs sm:text-sm font-semibold text-blue-600">
                 Client Details
               </span>
-              <div className="hidden lg:block text-xs text-gray-500 border-l pl-4 ml-4">
-                <span className="font-mono">{tenantId}</span>
-              </div>
+              <TenantSwitcher />
               <UserMenu />
             </div>
           </div>
@@ -1426,10 +1443,23 @@ function SignatureModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any) => void
-  filing: any
-  client: any
-  spouse: any
+  onSubmit: (data: {
+    pdfPath: string;
+    taxPayerEmail: string;
+    taxPayerName: string;
+    taxPayerSsn: string;
+    spouseName: string;
+    spouseEmail: string;
+    grossIncome: number;
+    totalTax: number;
+    taxWithHeld: number;
+    refund: number;
+    owed: number;
+    spouseSignature: boolean;
+  }) => void
+  filing: { income: number | null; year: number; [key: string]: unknown }
+  client: { email?: string | null; firstName?: string | null; lastName?: string | null; ssn?: string | null; [key: string]: unknown }
+  spouse: { email?: string | null; firstName?: string | null; lastName?: string | null; [key: string]: unknown } | null
   isSending: boolean
 }) {
   const [formData, setFormData] = useState({

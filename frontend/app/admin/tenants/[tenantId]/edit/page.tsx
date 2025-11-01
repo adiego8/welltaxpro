@@ -138,7 +138,27 @@ function EditTenantContent() {
       const idToken = await user?.getIdToken()
 
       // Build update payload - only include fields that have values
-      const payload: any = {
+      const payload: {
+        tenantName: string;
+        dbHost: string;
+        dbPort: number;
+        dbUser: string;
+        dbName: string;
+        dbSslMode: string;
+        schemaPrefix: string;
+        adapterType: string;
+        isActive: boolean;
+        dbPassword?: string;
+        storageProvider?: string;
+        storageBucket?: string;
+        storageCredentialsSecret?: string;
+        storageCredentialsPath?: string;
+        docusignIntegrationKey?: string;
+        docusignClientId?: string;
+        docusignPrivateKeySecret?: string;
+        docusignApiUrl?: string;
+        notes?: string;
+      } = {
         tenantName: formData.tenantName,
         dbHost: formData.dbHost,
         dbPort: parseInt(formData.dbPort),

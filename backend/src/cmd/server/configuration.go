@@ -38,18 +38,12 @@ type SendGridConfig struct {
 	DefaultFromName  string `yaml:"defaultFromName"`
 }
 
-type PortalConfig struct {
-	JWTSecret string `yaml:"jwtSecret"`
-	BaseURL   string `yaml:"baseURL"`
-}
-
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Cors     CORSConfig     `yaml:"cors"`
 	Firebase FirebaseConfig `yaml:"firebase"`
 	SendGrid SendGridConfig `yaml:"sendgrid"`
-	Portal   PortalConfig   `yaml:"portal"`
 }
 
 func getConfiguration(args *Arguments) (*Config, error) {

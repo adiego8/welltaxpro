@@ -165,9 +165,6 @@ function ClientDetailContent() {
   // Filing status management
   const [completingFiling, setCompletingFiling] = useState<string | null>(null) // filingId being marked as completed
 
-  // Portal link management
-  const [sendingPortalLink, setSendingPortalLink] = useState(false)
-
   // Signature management
   const [signatureModalOpen, setSignatureModalOpen] = useState(false)
   const [selectedFilingForSignature, setSelectedFilingForSignature] = useState<string | null>(null)
@@ -364,42 +361,6 @@ function ClientDetailContent() {
       },
       'warning'
     )
-  }
-
-  // Send portal link to client
-  const handleSendPortalLink = async () => {
-    if (!user || !clientData) return
-
-    setSendingPortalLink(true)
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
-      const idToken = await user.getIdToken()
-
-      const response = await fetch(
-        `${apiUrl}/api/v1/${tenantId}/clients/${clientId}/portal/send`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            baseUrl: window.location.origin
-          })
-        }
-      )
-
-      if (!response.ok) {
-        throw new Error('Failed to send portal link')
-      }
-
-      const data = await response.json()
-      showAlert('Success', `Portal link sent to ${data.email}`, 'success')
-    } catch (err) {
-      showAlert('Failed', err instanceof Error ? err.message : 'Failed to send portal link', 'error')
-    } finally {
-      setSendingPortalLink(false)
-    }
   }
 
   // Send signature request
@@ -624,22 +585,8 @@ function ClientDetailContent() {
           {/* Client Header */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
             <div className="px-4 py-5 sm:px-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="flex-1">
-                  <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">Client Information</h3>
-                  <p className="mt-1 text-xs sm:text-sm text-gray-500">Primary taxpayer details</p>
-                </div>
-                <button
-                  onClick={handleSendPortalLink}
-                  disabled={sendingPortalLink}
-                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  {sendingPortalLink ? 'Sending...' : 'Send Portal Link'}
-                </button>
-              </div>
+              <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">Client Information</h3>
+              <p className="mt-1 text-xs sm:text-sm text-gray-500">Primary taxpayer details</p>
             </div>
             <div className="border-t border-gray-200">
               <dl>

@@ -21,33 +21,29 @@ type CORSConfig struct {
 }
 
 type API struct {
-	context             context.Context
-	Router              *mux.Router
-	store               *store.Store
-	authMiddleware      *middleware.AuthMiddleware
-	auditMiddleware     *middleware.AuditMiddleware
-	portalAuthMiddleware *middleware.PortalAuthMiddleware
-	emailService        *notification.EmailService
-	portalJWTSecret     string
-	portalBaseURL       string
+	context              context.Context
+	Router               *mux.Router
+	store                *store.Store
+	authMiddleware       *middleware.AuthMiddleware
+	tenantUserAuthMiddleware *middleware.TenantUserAuthMiddleware
+	auditMiddleware      *middleware.AuditMiddleware
+	emailService         *notification.EmailService
 }
 
 // NewAPI creates and returns a new API instance
-func NewAPI(ctx context.Context, s *store.Store, authClient *auth.Auth, emailService *notification.EmailService, portalJWTSecret, portalBaseURL string) *API {
+func NewAPI(ctx context.Context, s *store.Store, authClient *auth.Auth, emailService *notification.EmailService) *API {
 	authMw := middleware.NewAuthMiddleware(authClient, s)
+	tenantUserAuthMw := middleware.NewTenantUserAuthMiddleware(authClient)
 	auditMw := middleware.NewAuditMiddleware(s)
-	portalAuthMw := middleware.NewPortalAuthMiddleware(portalJWTSecret)
 
 	return &API{
-		context:             ctx,
-		Router:              mux.NewRouter(),
-		store:               s,
-		authMiddleware:      authMw,
-		auditMiddleware:     auditMw,
-		portalAuthMiddleware: portalAuthMw,
-		emailService:        emailService,
-		portalJWTSecret:     portalJWTSecret,
-		portalBaseURL:       portalBaseURL,
+		context:              ctx,
+		Router:               mux.NewRouter(),
+		store:                s,
+		authMiddleware:       authMw,
+		tenantUserAuthMiddleware: tenantUserAuthMw,
+		auditMiddleware:      auditMw,
+		emailService:         emailService,
 	}
 }
 
@@ -433,33 +429,34 @@ func (api *API) InitRoutes() {
 		),
 	).Methods(http.MethodPut)
 
-	// Client Portal endpoints
-	// Send portal access link (admin only)
-	api.Router.Handle("/api/v1/{tenantId}/clients/{clientId}/portal/send",
+	// Tenant User Portal endpoints (Firebase-authenticated client access)
+	// Auto-register tenant user on first sign-in (requires Firebase auth)
+	api.Router.Handle("/api/v1/{tenantId}/user/register",
+		api.tenantUserAuthMiddleware.Authenticate(
+			http.HandlerFunc(api.autoRegisterTenantUser),
+		),
+	).Methods(http.MethodPost)
+
+	// Manual registration by admin (admin only) - links Firebase UID to client record
+	api.Router.Handle("/api/v1/{tenantId}/users/register",
 		api.authMiddleware.Authenticate(
 			api.authMiddleware.RequireAdmin(
-				http.HandlerFunc(api.sendPortalLink),
+				http.HandlerFunc(api.registerTenantUser),
 			),
 		),
 	).Methods(http.MethodPost)
 
-	// Validate portal token (public endpoint)
-	api.Router.HandleFunc("/api/v1/portal/validate", api.validatePortalToken).Methods(http.MethodGet)
-
-	// Exchange magic link token for session token (public endpoint with SSN verification)
-	api.Router.HandleFunc("/api/v1/portal/exchange", api.exchangeMagicToken).Methods(http.MethodPost)
-
-	// Portal client data endpoint (token-based authentication, uses same comprehensive endpoint as admin)
-	api.Router.Handle("/api/v1/{tenantId}/portal/client",
-		api.portalAuthMiddleware.Authenticate(
-			http.HandlerFunc(api.getPortalClient),
+	// Get tenant user's own profile and data (requires Firebase auth, tenant user only)
+	api.Router.Handle("/api/v1/{tenantId}/user/profile",
+		api.tenantUserAuthMiddleware.Authenticate(
+			http.HandlerFunc(api.getTenantUserProfile),
 		),
 	).Methods(http.MethodGet)
 
-	// Portal document download (token-based authentication, client can only download their own documents)
-	api.Router.Handle("/api/v1/{tenantId}/portal/documents/{documentId}/download",
-		api.portalAuthMiddleware.Authenticate(
-			http.HandlerFunc(api.downloadPortalDocument),
+	// Download tenant user's own document (requires Firebase auth, tenant user only)
+	api.Router.Handle("/api/v1/{tenantId}/user/documents/{documentId}/download",
+		api.tenantUserAuthMiddleware.Authenticate(
+			http.HandlerFunc(api.downloadTenantUserDocument),
 		),
 	).Methods(http.MethodGet)
 

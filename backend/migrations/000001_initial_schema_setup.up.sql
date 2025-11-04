@@ -138,42 +138,27 @@ COMMENT ON COLUMN audit_logs.action IS 'Action performed: view, create, update, 
 COMMENT ON COLUMN audit_logs.resource_type IS 'Type of resource: client, document, filing, etc.';
 
 -- ============================================================================
--- Portal Magic Tokens Table
+-- Tenant Users Table (for client portal access)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS portal_magic_tokens (
-    id UUID PRIMARY KEY,
-    client_id UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS tenant_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id VARCHAR(100) NOT NULL,
-    email TEXT NOT NULL,
-    used BOOLEAN DEFAULT FALSE,
-    used_at TIMESTAMP,
-    ip_address TEXT,
-    user_agent TEXT,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
+    client_id UUID NOT NULL,
+    firebase_uid VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_magic_token_tenant FOREIGN KEY (tenant_id) REFERENCES tenant_connections(tenant_id) ON DELETE CASCADE
+    CONSTRAINT fk_tenant_user_tenant FOREIGN KEY (tenant_id) REFERENCES tenant_connections(tenant_id) ON DELETE CASCADE,
+    CONSTRAINT uq_tenant_client UNIQUE (tenant_id, client_id)
 );
 
-CREATE INDEX idx_magic_tokens_client ON portal_magic_tokens(client_id);
-CREATE INDEX idx_magic_tokens_expiry ON portal_magic_tokens(expires_at);
-CREATE INDEX idx_magic_tokens_used ON portal_magic_tokens(used);
-CREATE INDEX idx_magic_tokens_tenant ON portal_magic_tokens(tenant_id);
+CREATE INDEX idx_tenant_users_firebase_uid ON tenant_users(firebase_uid);
+CREATE INDEX idx_tenant_users_tenant ON tenant_users(tenant_id);
+CREATE INDEX idx_tenant_users_client ON tenant_users(tenant_id, client_id);
+CREATE INDEX idx_tenant_users_active ON tenant_users(is_active);
 
-COMMENT ON TABLE portal_magic_tokens IS 'Tracks one-time use magic link tokens with 24-hour expiry for portal access';
-COMMENT ON COLUMN portal_magic_tokens.id IS 'JWT ID (jti claim) for token tracking';
-COMMENT ON COLUMN portal_magic_tokens.used IS 'Marks if token has been exchanged for session token';
-
--- ============================================================================
--- Cleanup Function for Expired Magic Tokens
--- ============================================================================
-CREATE OR REPLACE FUNCTION cleanup_expired_magic_tokens() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    DELETE FROM portal_magic_tokens
-    WHERE expires_at < NOW() - INTERVAL '7 days';
-END;
-$$;
-
-COMMENT ON FUNCTION cleanup_expired_magic_tokens IS 'Removes expired magic tokens older than 7 days (run via cron)';
+COMMENT ON TABLE tenant_users IS 'Users who can access their own data in the tenant portal (read-only)';
+COMMENT ON COLUMN tenant_users.client_id IS 'Reference to the client record in the tenant database';
+COMMENT ON COLUMN tenant_users.firebase_uid IS 'Firebase UID for authentication (Google/Phone)';

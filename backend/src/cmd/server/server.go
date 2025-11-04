@@ -86,7 +86,7 @@ func Run(ctx context.Context) {
 
 	// Initialize API
 	logger.Info("Starting API")
-	api := webapi.NewAPI(ctx, store, authClient, emailService, config.Portal.JWTSecret, config.Portal.BaseURL)
+	api := webapi.NewAPI(ctx, store, authClient, emailService)
 	api.InitRoutes()
 
 	// Setup HTTP server with graceful shutdown
